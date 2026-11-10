@@ -1,0 +1,110 @@
+/* =========================================================
+   FAIRFLOW PORTAL ENHANCEMENTS
+   ========================================================= */
+
+/* Hide sidebar on login/signup page only */
+body.page-auth aside#sidebar { display: none !important; }
+body.page-auth .shell { margin-left: 0 !important; }
+body.page-auth .shell > header { display: none !important; }
+
+/* Hide AGREEMENTS badge everywhere */
+.step-badge { display: none !important; }
+
+/* =========================================================
+   FAIRFLOW HERO — shown above the login/signup card
+   ========================================================= */
+.ff-hero {
+  background: #fff;
+  padding: 48px 24px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Logo icon */
+.ff-hero-icon {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #1a56db, #3b82f6);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(26, 86, 219, 0.35);
+  margin-bottom: 4px;
+}
+.ff-hero-icon svg {
+  width: 42px;
+  height: 42px;
+}
+
+/* FairFlow name with flowing blue shimmer left -> right */
+.ff-hero-name {
+  font-size: 3.2rem;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+  margin: 0;
+
+  /* Shimmer gradient flowing left to right */
+  background: linear-gradient(
+    90deg,
+    #1e3a8a 0%,
+    #1a56db 20%,
+    #60a5fa 40%,
+    #93c5fd 50%,
+    #60a5fa 60%,
+    #1a56db 80%,
+    #1e3a8a 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: ff-flow 2.4s linear infinite;
+}
+
+@keyframes ff-flow {
+  0%   { background-position: 100% center; }
+  100% { background-position: -100% center; }
+}
+
+/* Tagline below name */
+.ff-hero-tag {
+  font-size: 0.82rem;
+  color: #6b7280;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* =========================================================
+   PASSWORD EYE TOGGLE
+   ========================================================= */
+.pw-wrap { position: relative; }
+.pw-wrap input { width: 100%; padding-right: 44px !important; box-sizing: border-box; }
+.pw-eye-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  font-size: 17px; color: #9ca3af; padding: 0; line-height: 1;
+}
+.pw-eye-btn:hover { color: #1a56db; }
+.pw-eye-btn svg { display: block; width: 20px; height: 20px; }
+.pw-eye-btn .eye-slash { display: none; }
+.pw-eye-btn[aria-pressed="true"] .eye-slash { display: block; }
+.pw-eye-btn:focus-visible { outline: 2px solid #2563eb; outline-offset: 4px; border-radius: 3px; }
+
+/* =========================================================
+   FORGOT PASSWORD — right below password field
+   ========================================================= */
+.ff-forgot-inline {
+  background: none; border: none; color: #2563eb;
+  cursor: pointer; font-size: 0.85rem;
+  padding: 2px 0; text-align: left;
+  display: block; margin-top: 4px; margin-bottom: 10px;
+}
+.ff-forgot-inline:hover { text-decoration: underline; }
+button#forgot { display: none !important; }

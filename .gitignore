@@ -1,0 +1,24 @@
+venv/
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+*.db
+*.db-*
+*.log
+.env.database
+.env.paypal-us
+backups/
+local-mail/
+.showcase/
+.env.paypal-platform
+.paypal-platform-test/
+
+# Private runtime configuration and generated artifacts
+.env.*
+!.env.example
+reports/
+*.pem
+*.key
+*.p12
+*.pfx
