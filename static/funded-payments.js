@@ -15,6 +15,15 @@ function fundedPaymentControls(container){
     const collect=card.querySelector('[data-pay-authorize]');if(collect)collect.textContent='Confirm approval & collect funding';
     card.querySelectorAll('[data-pay-renew]').forEach(b=>b.remove());
     if(payment?.provider_disburse_by&&!['captured','refunded','disbursing'].includes(payment.status))(card.querySelector('.payment-main')||card).insertAdjacentHTML('beforeend',`<p class="help">PayPal automatic disbursement deadline: <strong>${esc(uiDate(payment.provider_disburse_by,true))}</strong>. Client approval or the review deadline can request an earlier release.</p>`);
+    if(funded&&payment.status==='refunded'){
+      const main=card.querySelector('.payment-main')||card;
+      const badge=card.querySelector('.split-title .pill');if(badge)badge.textContent='Refund confirmed';
+      main.querySelectorAll(':scope > p').forEach(node=>{if(node.textContent.startsWith('Payment release:'))node.remove();});
+      main.insertAdjacentHTML('beforeend',`<section class="notice" aria-label="Client refund"><strong>Refund confirmed by PayPal</strong><p>Refunded amount: <strong>${money(payment.refunded_minor??payment.amount_minor,payment.currency)}</strong></p><p>The milestone payment was refunded to the client. Your original payment method may take additional time to show the credit.</p>${payment.refund_id?`<p class="help">PayPal refund reference: ${esc(payment.refund_id)}</p>`:''}${payment.refunded_at?`<p class="help">Refund verified: ${esc(uiDate(payment.refunded_at,true))}</p>`:''}</section>`);
+      return;
+    }
+    if(funded&&payment.status==='settling'&&!payment.delivery_url&&S.room.project.withdrawal?.status==='accepted')
+      (card.querySelector('.payment-main')||card).insertAdjacentHTML('beforeend','<section class="notice" aria-label="Client refund"><strong>Refund processing</strong><p>Withdrawal was accepted. This unsubmitted milestone is being settled; the refund is not confirmed until PayPal verification completes. See Resolution for operation details.</p></section>');
     if(funded){
       const paid=payment.status==='captured', released=paid||payment.status==='disbursing'||!!payment.disbursed_at;
       if(payment.capture_id)(card.querySelector('.payment-main')||card).insertAdjacentHTML('beforeend',`<section class="notice" aria-label="PayPal collection and release"><strong>Collection and release</strong><p>Client funds: collected${payment.collection_verified_at?' - Verified '+esc(uiDate(payment.collection_verified_at,true)):''}.</p><p>PayPal disbursement mode: <strong>${esc(payment.provider_disbursement_mode||'Check provider status')}</strong>.</p><p>FairFlow release: ${payment.release_requested_at?'Requested '+esc(uiDate(payment.release_requested_at,true)):payment.release_reason?'Approval recorded; check provider status':'No release request recorded'}.</p>${payment.disbursed_at?`<p>Seller release verified: ${esc(uiDate(payment.disbursed_at,true))}.</p>`:''}<small>PayPal controls fund availability. A completed collection is not proof that the seller can withdraw it.</small></section>`);

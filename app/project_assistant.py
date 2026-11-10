@@ -95,6 +95,12 @@ def context(conn, p, revision, user):
     return {'as_of':datetime.now(timezone.utc).isoformat(), 'revision':revision,
             'sources':sources, 'currency_precision': get_currency_precision((active or proposed or {}).get('payload',{}).get('payment',{}).get('currency','USD'))}
 
+def review_sources(sources):
+    """Ignore polling timestamps, retaining all terms, evidence and payment outcomes."""
+    return {sid:({key:value for key,value in source.items() if key != 'provider_checked_at'}
+                 if sid.startswith('payment-') else source) for sid,source in sources.items()}
+
+
 def mount(app):
     router = APIRouter(prefix='/api/{portal}')
     @router.post('/projects/{pid}/assistant')
@@ -109,7 +115,7 @@ def mount(app):
             raise HTTPException(413, 'This project has too much evidence for one review. Please use human review for now.')
         # Ordinary chat requests can ask for the same review as the toolbar action.
         work_intent = data.review_mode == 'work' or (data.review_mode == 'question' and bool(re.search(
-            r'\b(review|inspect|check|analyse|analyze|verify|compare|evaluate)\b.*\b(work|website|site|delivery|deliverable|submission|submitted|milestone|requirements?)\b|\b(work|website|site|delivery|submission)\b.*\b(review|inspect|check|analyse|analyze|verify|compare)\b',
+            r'\b(screenshots?|screen\s*shots?|ss)\b|\b(review|inspect|check|analyse|analyze|verify|compare|evaluate)\b.*\b(work|website|site|delivery|deliverable|submission|submitted|milestone|requirements?)\b|\b(work|website|site|delivery|submission)\b.*\b(review|inspect|check|analyse|analyze|verify|compare)\b',
             data.question, re.I)))
         review_mode = 'work' if work_intent else data.review_mode
         attachments = list(data.attachments)
@@ -151,7 +157,7 @@ def mount(app):
         # Recheck membership and freshness before exposing an answer.
         with db.engine().connect() as conn:
             latest, fresh = n.project(conn, pid, user)
-            if context(conn, latest, fresh, user)['sources'] != snapshot['sources']:
+            if review_sources(context(conn, latest, fresh, user)['sources']) != review_sources(snapshot['sources']):
                 raise HTTPException(409, 'Project details changed during review. Ask again for a current answer.')
         known = {**snapshot['sources'], **inspected}
         return dict(answer=result.answer, sources=[s for s in result.sources if s in known],

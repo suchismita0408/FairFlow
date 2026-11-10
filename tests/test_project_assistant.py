@@ -104,7 +104,8 @@ def test_assistant_attachment_body_above_default_limit(portals,monkeypatch):
     assert response.status_code==200,response.text
 
 
-def test_normal_chat_review_inspects_saved_submission(portals, monkeypatch):
+@pytest.mark.parametrize('question', ['Check submitted website against the milestone requirements', 'Show screenshots of my submitted website', 'Show me ss'])
+def test_normal_chat_review_inspects_saved_submission(portals, monkeypatch, question):
     c,f,room=start(portals);pid=room['project']['id']
     monkeypatch.setenv('AI_MODE','gemini')
     uid=c.get('/api/auth/me').json()['user']['id']
@@ -118,6 +119,26 @@ def test_normal_chat_review_inspects_saved_submission(portals, monkeypatch):
         return assistant.Answer(answer='Reviewed the submitted website.',sources=['website-1'])
     monkeypatch.setattr(assistant.inspection,'inspect',inspect)
     monkeypatch.setattr(assistant.ai,'structured',generate)
-    result=c.post(f'/api/client/projects/{pid}/assistant',json={'question':'Check submitted website against the milestone requirements'})
+    result=c.post(f'/api/client/projects/{pid}/assistant',json={'question':question})
     assert result.status_code==200,result.text
     assert result.json()['inspections'][0]['inspection']=='Rendered Chromium desktop/mobile review'
+
+
+@pytest.mark.parametrize('material_change', [False,True])
+def test_review_ignores_poll_timestamp_but_rejects_payment_changes(portals,monkeypatch,material_change):
+    c,f,room=start(portals);pid=room['project']['id']
+    monkeypatch.setenv('AI_MODE','gemini')
+    original=assistant.context
+    calls=0
+    def context(*args):
+        nonlocal calls
+        calls+=1
+        result=original(*args)
+        result['sources']['payment-test']={'status':'captured' if material_change and calls>1 else 'in_review',
+                                           'provider_checked_at':str(calls),'amount_minor':100}
+        return result
+    async def generate(*args,**kwargs):return assistant.Answer(answer='Review findings.')
+    monkeypatch.setattr(assistant,'context',context)
+    monkeypatch.setattr(assistant.ai,'structured',generate)
+    result=c.post(f'/api/client/projects/{pid}/assistant',json={'question':'What is my review status?'})
+    assert result.status_code==(409 if material_change else 200),result.text

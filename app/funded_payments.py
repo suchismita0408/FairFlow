@@ -408,7 +408,7 @@ async def reconcile(pid,mid,user):
             if (status=='COMPLETED' or status=='PARTIALLY_REFUNDED' and saved['payload'].get('refunded_minor') and saved['payload'].get('settlement_amount_minor')) and (mode=='INSTANT' or released):
                 unexpected=not saved['payload'].get('release_reason') and not saved['payload'].get('release_requested_at') and not saved['payload'].get('release_response') and saved['status']!='captured'
                 warning='PayPal reports seller release without a recorded FairFlow release request. The payment is no longer awaiting release; check PayPal before funding more work.' if unexpected or saved['payload'].get('unexpected_disbursement') else None
-                a.save(conn,saved,'captured',disbursed_at=db.now(),provider_checked_at=db.now(),attention=warning,unexpected_disbursement=unexpected or saved['payload'].get('unexpected_disbursement',False))
+                a.save(conn,saved,'captured',disbursed_at=saved['payload'].get('disbursed_at') or db.now(),provider_checked_at=db.now(),attention=warning,unexpected_disbursement=unexpected or saved['payload'].get('unexpected_disbursement',False))
                 if unexpected:
                     db.log(conn,'unexpected_platform_disbursement',user['id'],pid,milestone_id=mid,capture_id=result['id'])
                     n.notify(conn,p,'payment_attention',warning)

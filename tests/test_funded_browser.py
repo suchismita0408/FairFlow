@@ -69,5 +69,14 @@ def test_funded_delivery_ui_and_compact_receiving_status(step1_server):
         expect(page.get_by_role('button',name='Submit delivery link',exact=True)).to_have_count(0)
         expect(page.locator('.delivery-link')).to_have_count(0)
         expect(page.get_by_role('button',name='Submit work & view feedback',exact=True)).to_be_visible()
+        with db.engine().begin() as conn:
+            saved=db.one(conn,db.milestone_payments,db.milestone_payments.c.project_id==pid)
+            payload={**saved['payload'],'refund_id':'REFUND-TEST','refunded_at':db.now()}
+            conn.execute(update(db.milestone_payments).where(db.milestone_payments.c.id==saved['id']).values(status='refunded',payload=payload))
+        page.reload()
+        refund=page.locator('[aria-label="Client refund"]')
+        expect(refund).to_contain_text('Refund confirmed by PayPal')
+        expect(refund).to_contain_text('REFUND-TEST')
+        expect(page.locator('[aria-label="Payment progress"]')).to_have_count(0)
         context.close();browser.close()
     for client in clients.values():client.close()
