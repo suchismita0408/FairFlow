@@ -1,132 +1,146 @@
 # FairFlow
 
-Delivery deadlines, cancellation/partial settlement, paid change requests, evidence, funding recovery and the human support queue: [RESOLUTION_WORKFLOWS.md](docs/RESOLUTION_WORKFLOWS.md). Open the **Resolution** tab in a signed project. Configure reviewer accounts and SMTP separately; existing agreements need explicit consent for the new delivery-protection policy.
+### Clear agreements. Evidence-based reviews. Traceable payments.
 
-Current payment-aware amendments and lifecycle edge-case support: [SCENARIO_SUPPORT_AUDIT.md](docs/SCENARIO_SUPPORT_AUDIT.md). Remaining unfunded work can be amended in the same project after verified payout; paid terms and payment records retain their original signed versions.
+FairFlow is a shared workspace for clients and freelancers that connects **what was agreed, what was delivered, and when payment should be released**. It combines versioned agreements, PayPal Sandbox milestone funding, delivery evidence, structured resolution workflows and **Ask Flow**, a project-aware AI assistant.
 
-Current automatic-release, withdrawal, deletion and chat-notification rules: [WORKFLOW_UPDATE.md](docs/WORKFLOW_UPDATE.md). New signatures and funding require automatic-release terms; historical signed versions are preserved.
+The goal is to make freelance collaboration fairer for both sides: give freelancers stronger confidence before starting work, help clients assess delivery before approving release, and give both participants a clear record when expectations change.
 
-Current feature-by-feature code audit, completed fixes and unfinished work: [FEATURE_AUDIT.md](docs/FEATURE_AUDIT.md).
+## The problem
 
-Payment receipt and 29-day signing priority: [PAYMENT_SETUP_STATUS.md](docs/PAYMENT_SETUP_STATUS.md). The USD 10 freelancer Sandbox payout is verified SUCCESS using a separate US sender account, while the original capture account remains preserved. Real email configuration is reserved for a future sender/provider.
+Freelance disagreements often start before a payment fails. Important promises are scattered across messages, deliverables are vague, and each person interprets ?finished? differently. A client may assume a feature is included while a freelancer sees additional work. When a project goes wrong, reconstructing the agreement and deciding what was delivered becomes difficult.
 
-Current project explanation, feature audit, limitations and demo runbook: [HACKATHON_REVIEW.md](docs/HACKATHON_REVIEW.md). Real verification-email setup: [EMAIL_SETUP.md](docs/EMAIL_SETUP.md). These supersede historical feature descriptions below where noted.
+FairFlow addresses these problems as one connected workflow:
 
-FairFlow provides separate client/freelancer portals, a compact four-step agreement builder, AI review of terms and conversation, deterministic validation, turn-based negotiation and exact-hash signatures. Signed agreements open a shared workspace with PayPal Sandbox milestone authorization, delivery and automatic capture after the signed review period without an objection. Capture goes to the configured merchant; approval automatically requests a separate Sandbox payout to send the full milestone amount to the freelancer's chosen test account.
+| Problem in freelance collaboration | FairFlow's approach | Value for both sides |
+| --- | --- | --- |
+| Unclear scope and conflicting promises | Structured deliverables, acceptance criteria, milestones, exclusions and agreement checks | A clearer definition of completion before work starts |
+| Starting work without verified funding | Upfront PayPal Sandbox collection with requested delayed seller disbursement; provider verification before delivery | Stronger funding evidence for freelancers and a defined client review stage |
+| Endless unpaid additions | Paid change requests with explicit bilateral acceptance | Extra work has its own agreed scope, price and schedule |
+| Unclear revision expectations | Recorded revision allowances and resubmission history | A shared record of requested corrections and included revisions |
+| Clients forgetting terms across projects | Ask Flow answers from the current project's agreement, accepted changes and payment records | Prices, requirements and deadlines are easier to retrieve |
+| Difficulty reviewing technical deliveries | AI comparison of milestone criteria with submitted links, documents and screenshots | Concrete findings and visible evidence support human review |
+| Disputes based on competing claims | Shared cases, responses, preserved evidence and mutually accepted resolution proposals | A structured route to discuss cancellation, partial work and settlement |
+| Silent clients or missed deadlines | Agreed review periods, reminders and eligible automatic release requests | Both participants know the next action and timing |
+| Confusing payment status | Separate collection, release request and verified release records | A checkout return or submitted request is not mistaken for confirmed payment |
 
-The existing FastAPI/PostgreSQL/vanilla JavaScript stack is preserved. Specification comparison and implementation decisions: [STEP1_IMPLEMENTATION.md](docs/STEP1_IMPLEMENTATION.md). Current verification and remaining work: [PLATFORM_STATUS.md](docs/PLATFORM_STATUS.md).
+## How it works
 
-## Step 1 quick start
+**Agree ? Sign ? Fund ? Deliver ? Review ? Release or resolve**
 
-```powershell
-python -m pip install -r requirements-dev.txt
-python -m scripts.setup_local
-docker compose up -d --wait db
-python -m alembic upgrade head
-python -m scripts.seed_step1  # optional local demo accounts and three sample projects
-./run.ps1
-```
+1. **Define the work.** The client creates a project and invites a freelancer. The agreement records deliverables, acceptance criteria, prices, deadlines, revision allowances and responsibilities.
+2. **Review and sign.** Structured validation checks supported conflicts; AI provides advisory review of terms and conversation. Both participants sign the exact same immutable agreement version.
+3. **Verify milestone funding.** The freelancer connects an eligible PayPal Sandbox receiving account. The client approves upfront collection, and FairFlow verifies the matching provider payment before allowing delivery.
+4. **Submit evidence.** The freelancer submits a delivery link, notes and supported files. The project records the submission and its agreed review deadline.
+5. **Review with assistance.** The client inspects the work, asks Flow questions, requests an included revision, or raises a timely objection when appropriate.
+6. **Complete or resolve.** Approval, or an eligible unopposed review timeout, triggers a seller-release request. Where there is disagreement, the parties can exchange evidence and accept a supported resolution or settlement.
 
-Open [Client portal](http://127.0.0.1:8000/client/login) or [Freelancer portal](http://127.0.0.1:8000/freelancer/login). New accounts choose their fixed role at signup; use **Local email preview** to verify email in local development. Invite a known freelancer; discovery is outside this step.
+## Core functionality
 
-Seeded demo emails: `step1-client@example.com` and `step1-freelancer@example.com`. Local development password: `Demo-terms-only-123!` unless `FAIRFLOW_DEMO_PASSWORD` was set when seeding. The client has a deliberately contradictory draft, an invitation, a signed agreement and a separate signed USD **Sandbox payment demo** project. The payment demo is not funded until its client starts checkout and a Sandbox buyer approves it.
+### 1. Clear agreements before work begins
 
-```powershell
-python -m playwright install chromium
-python -m pytest -q
-python -m scripts.verify_step1_postgres
-```
+FairFlow's agreement builder brings scope, acceptance criteria, milestone amounts, review terms, revisions and policy clauses into one document. Supported validation checks catch missing fields, inconsistent totals and conflicting structured terms. Gemini can help identify ambiguity and suggest clarifications.
 
-Run `python -m pytest -q` for the current test result; the isolated PostgreSQL script also covers the milestone payment and Sandbox payout APIs. SMTP transport is implemented but needs a configured sender. Marketplace seller onboarding, live payout approval, production hosting and independent security/accessibility audits remain open.
+Negotiation produces versioned proposals. Both parties independently accept and sign the same version; later changes do not silently overwrite signed history. Agreement exports and acceptance records keep the baseline accessible throughout the project.
 
-## PayPal Sandbox milestone demo
+### 2. Payment confidence through funded milestones
 
-Keep the Sandbox client ID and secret in `.env` on the server. Set `PAYPAL_ENABLED_CURRENCIES=USD` (or another currency confirmed for your Sandbox merchant) and `APP_BASE_URL` to the URL you actually use. Run `python -m alembic upgrade head` before starting the app. Never put the client secret in browser code or a public repository.
+The current payment model uses **PayPal Multiparty Sandbox capture with delayed disbursement**:
 
-Sign a project in an enabled currency with its first milestone due within PayPal's authorization window. In the signed workspace, open **Payments**. The client starts checkout, approves it in a personal PayPal Sandbox account, returns to FairFlow and selects **Verify buyer approval**. The freelancer then submits a delivery link. The client can request an included revision or raise a dispute during the signed review period. Without an objection, the running worker automatically requests capture and payout when that period ends; there is no second client payment-approval step. Each provider step has a separate recorded status and audit event. A return from PayPal alone does not mark funds authorized.
+- The client funds an agreed milestone before delivery.
+- The order must explicitly report delayed disbursement before FairFlow sends capture.
+- A matching completed delayed capture is required before the milestone is treated as funded.
+- The payment's seller, amount, currency and original platform association are checked.
+- FairFlow requests seller release after client approval or an eligible review timeout without an objection.
+- Provider reconciliation verifies outcomes; duplicate actions are guarded, uncertain operations pause, and unexpected releases are flagged.
 
-Before checkout, the freelancer saves a **PayPal Sandbox recipient email** in Profile or Payments and confirms it is their receiving test account. The client reviews and confirms the recipient at checkout. Successful capture automatically requests the payout, with no second payment click. The **Send freelancer Sandbox payout** action remains for historical captured payments or recovery before any payout intent exists. This is a separate transfer from the merchant's Sandbox balance. The full milestone amount goes to the recipient; the merchant covers payout fees. Click **Check payout status** in either portal to fetch the individual payout item's latest state. Only PayPal item `SUCCESS` is shown as received; a submitted or successful batch alone does not prove receipt. Existing payout amounts and recipients are frozen, and one payout intent per captured milestone prevents duplicate release. The configured app must have PayPal Payouts access and sufficient Sandbox merchant balance. A Payouts OAuth scope alone does not prove a transfer will succeed.
+This improves funding visibility and ties release requests to the review workflow. **It is a Sandbox prototype, not regulated escrow or a payment guarantee.** PayPal controls actual availability, fees, reversals and external disputes. Its automatic disbursement limit is 28 days; an internal case cannot extend that limit. Independent balance-hold verification remains a deployment prerequisite, even where API responses report delayed mode.
 
-Each milestone must fit delivery, 3-5 calendar review days, revision turnaround and a one-day capture buffer within its planned 29-day authorization period. The actual expiry is checked again at authorization and delivery. PayPal recommends capture within the first three-day honor period; authorizations can expire, and captures or payouts can fail. An uncertain provider response pauses the operation for reconciliation; failed/uncertain payout intents cannot be sent again from the UI. This demo does not provide licensed escrow or guarantee collection. The seeded INR agreement may not be fundable if this merchant only enables USD; agree and sign a USD amendment or create a new USD project for the Sandbox demo. Local email preview remains the notification channel. Real marketplace seller onboarding and live payout approval remain separate launch requirements.
+See [the current funding model and verification notes](docs/UPFRONT_FUNDING.md).
 
-The previous implementation below is retained as historical/compatibility documentation. Its payment and AI decision actions are blocked for new Step 1 accounts. Historical accounts retain their original data and cannot enter fixed-role portals until an explicit migration policy is implemented. Legacy account creation and password-free demo login are disabled by default.
+### 3. Ask Flow: an assistant that knows the project
+
+Ask Flow is a floating, resizable chat window available across the portals. Within a selected project it can:
+
+- Explain agreed prices, dates, deliverables, revisions and payment status.
+- Distinguish signed terms and accepted changes from pending proposals.
+- Compare submitted work with individual acceptance criteria.
+- Analyse supported PDFs, images, screenshots and text/code attachments.
+- Inspect public websites using rendered Chromium evidence during work review.
+- Summarise both parties' dispute evidence and suggest a non-binding resolution.
+
+Replies use concise conclusions, findings labelled **Met**, **Missing** or **Not verified**, and a practical next step. Sources, review limits and inspection screenshots are available in expandable details.
+
+Website review executes JavaScript, captures desktop/mobile views, reads rendered content and visits up to two relevant linked pages. It does not provide exhaustive functional testing: authentication, purchases, form submission and backend delivery still require separate checks. A matching website is not proof of freelancer authorship or ownership.
+
+**AI assists participants; it cannot sign agreements, approve work, decide a binding settlement or move money.** Private chat attachments do not automatically become shared dispute evidence.
+
+See [assistant capabilities and inspection limits](docs/PROJECT_ASSISTANT.md).
+
+### 4. Evidence-based dispute resolution
+
+FairFlow gives disagreements a structured path instead of relying on an unorganised conversation. Participants can open a case, describe the issue, add responses and submit shared evidence. Delivery history and uploaded artifacts preserve what was submitted; checksums identify stored file contents.
+
+Supported workflows include cancellation, deadline extensions, paid changes, client-caused delays, partial-work handover and mutually accepted partial settlements/refunds. Each financial action remains subject to its payment state, consent requirements and provider verification.
+
+Ask Flow can compare claims with the agreement and inspect supplied evidence, identify gaps and recommend possible next steps. Configured human reviewers can assist escalated cases. The system does not invent a winner or treat silence as agreement to a disputed settlement. Filing a case and raising a timely payment objection are distinct actions; an internal case cannot override PayPal's deadlines.
+
+See [resolution workflows and boundaries](docs/RESOLUTION_WORKFLOWS.md).
+
+### 5. Changes without losing the original agreement
+
+**Change Requests** handles additional paid scope. **Resolution** handles problems with the existing agreement, such as cancellation, delays and partial-work claims. Future unfunded work can be amended while preserving the terms and records attached to existing funded milestones.
+
+### 6. A shared, traceable project room
+
+Separate client and freelancer portals provide agreements, milestones, payments, work tracking, chat, changes, resolution and activity history. Role and project membership checks protect access. Database-backed processing, recorded operation identities and reconciliation support recovery when external operations are uncertain.
+
+## Technology
+
+| Layer | Tools |
+| --- | --- |
+| Frontend | HTML, CSS and vanilla JavaScript |
+| Backend | Python, FastAPI, Pydantic and HTTPX |
+| Data | PostgreSQL, SQLAlchemy and Alembic |
+| AI | Gemini structured responses and multimodal evidence |
+| Website inspection | Playwright Chromium with bounded public-network inspection |
+| Payments | PayPal Sandbox Orders/Payments and Multiparty delayed disbursement; historical adapters preserved |
+| Background processing | Dedicated Python worker with persisted jobs |
+| Verification | pytest and Playwright browser checks |
 
 ## Run locally
 
-```powershell
-python -m pip install -r requirements.txt
-python -m scripts.setup_local
-docker compose up -d db
-python -m alembic upgrade head
-# Only when importing existing SQLite demo projects:
-python -m scripts.migrate_legacy
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
-# In a second terminal:
-python -m app.worker
-```
-
-Open http://127.0.0.1:8000. Register your own account and open **Local email preview** to verify it. Use a separate browser profile or private window for the other participant. No external emails are sent. Keep the server bound to localhost: the local email preview is a development convenience, not proof of email ownership suitable for production.
-
-Setup preserves existing configuration. Keep `.env`, `.env.database`, and the encryption key private and backed up. Losing the encryption key makes saved payment tokens and email previews unreadable. Docker stores PostgreSQL data in a named volume; do not delete that volume to restart the app.
-
-## What is implemented
-
-| Area | Current behavior |
-|---|---|
-| Accounts | Argon2id passwords, server-side sessions, HttpOnly cookies, CSRF checks, verification, password reset and login throttling |
-| Private projects | Explicit client/freelancer roles, email invitations and membership checks |
-| Agreements | Immutable versions, clause references and independent acceptance of the exact version by both accounts |
-| AI | Chat extraction, configurable Gemini fallback chain, clause retrieval, evidence references, citation validation and advisory classifications |
-| Decisions | Defects are separate from presentation revisions. Both participants approve the final classification and any added price; AI never charges money |
-| Milestones | 14-21 days, exact cent totals, priced work items, saved-method consent, five-day reviews and authorization-expiry checks |
-| Currencies | USD default, 25 PayPal catalog currencies, whole-unit validation where required, Sandbox merchant gating and no FairFlow FX markup |
-| Partial work | Both participants accept specific priced items and evidence; capture their value and carry forward unpaid work |
-| Disputes | Joint resolution only. No support or administrator override. Unresolved disputes stop automatic settlement |
-| Payments | Demo simulation, existing PayPal Sandbox adapters, operation journal, reconciliation reads, joint retry proposals and joint refunds |
-| Persistence | PostgreSQL, Alembic, optimistic versions, per-project advisory locks, encrypted vaulted tokens and balanced capture/refund ledger entries |
-| Worker | Separate durable job queue, leases with heartbeat, bounded retries, review notifications and uncertain-action review states |
-| Interface | Shared project room with Agreement, Milestones, AI review, Messages, Payments and Activity tabs |
-
-Older SQLite projects are backed up and imported as unassigned archives. They are not assigned to invented users or treated as newly accepted agreements. The original database remains intact. Historical operator-console instructions are in [LEGACY_DEMO.md](docs/LEGACY_DEMO.md); they do not describe the authenticated interface.
-
-## Try the workflow
-
-1. Register and verify two separate accounts using local email previews.
-2. Create an agreement, select your role, enter the other participant's email, and review the extracted terms, acceptance criteria and priced milestones.
-3. Accept the invitation in the other account. Both accounts accept the agreement independently.
-4. The client consents to the saved payment method and authorizes a milestone. Demo mode uses simulated money.
-5. The freelancer submits work or evidence. The client can approve delivery or request an evidence-based AI review.
-6. For a defect, addition, partial settlement, refund or administrative retry, review the explicit proposal in both accounts. The worker executes eligible jointly approved actions.
-7. Refresh the room to see asynchronous job results. Unchallenged delivered work becomes capture-eligible after five days; disputes block capture.
-
-## Verification
+Prerequisites: Python, Docker Desktop with Compose, and Chromium installed through Playwright.
 
 ```powershell
-python -m pytest -q
-python tests/platform_browser_smoke.py
-python -m scripts.evaluate_decisions
-python -m scripts.backup_database
-python -m scripts.verify_backup_restore
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\venv\Scripts\python.exe -m playwright install chromium
+.\run.ps1
 ```
 
-Current verification: **162 tests passed**. Browser smoke passed in USD and JPY with two separate accounts against local PostgreSQL, including revised priced items, invitation, acceptance, simulated funding, delivery, capture, ledger currency, all tabs and mobile width. Browser smoke creates clearly labelled QA records. PostgreSQL backup restoration passed in an isolated QA database with balanced ledgers; the application database was preserved.
+The launcher generates missing local configuration, starts PostgreSQL, applies migrations and starts the API with its background worker. Open [localhost:8000](http://127.0.0.1:8000). Use separate browser profiles for the client and freelancer.
 
-The synthetic evaluation has 12 cases; offline demo rules match 8 labels and abstain on cases they cannot establish. This is not a real-model accuracy score. `python -m scripts.evaluate_decisions --gemini` explicitly opts into provider calls. The report is written to `reports/decision-evaluation.json`.
+Configure Gemini in the private `.env` file for live AI responses. The separate PayPal platform configuration belongs in `.env.paypal-platform`; seller eligibility and partner permissions are required. Use `.env.example` as a configuration reference. Local email preview is provided for development; real email requires SMTP setup.
 
-## Stack
+**Never commit private configuration, API keys, database contents or backups.** These files are excluded from this repository.
 
-- FastAPI, Pydantic and HTTPX for API validation, workflow and integrations.
-- PostgreSQL 17 in Docker, SQLAlchemy and Alembic for persistence and schema management.
-- A separate Python durable worker using PostgreSQL jobs and advisory locks.
-- Argon2id for passwords and Fernet for vaulted-token/local-message encryption.
-- HTML, CSS and vanilla JavaScript served by FastAPI. The existing frontend was extended instead of introducing a second Next.js server.
-- Gemini structured output with configurable fallbacks and bounded timeouts. The configured primary model is not assumed to be available; provider errors try the configured alternatives and never silently switch a live request to demo rules.
-- PayPal Orders, Payments, Payment Method Tokens and Sandbox Payouts adapters. Live seller onboarding and payout approval remain open.
+## Verification and project status
 
-## Before a real launch
+Recent focused checks covered payment safeguards, assistant access and evidence handling, rendered website inspection, and desktop/mobile answer formatting. Most payment tests use simulated provider responses; they do not establish production payment readiness. Test results are scoped to their recorded runs, not a claim that the entire repository has passed a fresh full-suite run.
 
-See [PLATFORM_STATUS.md](docs/PLATFORM_STATUS.md) for the six implementation areas, operational limits and external setup. `APP_ENV=production` and live-payment mode are deliberately blocked until those gaps are addressed. Countries, PayPal marketplace eligibility, real email, seller onboarding and payouts still need decisions or provider setup. A saved payment method and a 29-day authorization do not guarantee collection.
+```powershell
+.\venv\Scripts\python.exe -m pytest tests/test_funded_payments.py -q
+.\venv\Scripts\python.exe -m pytest tests/test_project_assistant.py tests/test_assistant_inspection.py tests/test_assistant_browser.py -q
+```
 
-Agreement completeness, platform comparison, contradiction coverage and real-world launch steps: [AGREEMENT_REVIEW.md](docs/AGREEMENT_REVIEW.md). The agreement builder requires policy terms and blocks supported field conflicts before saving or acceptance.
+FairFlow currently demonstrates the collaboration workflow in a **local, Sandbox environment**. Production hosting, independent security review, real email operations, provider approval and full end-to-end payment verification remain launch requirements. AI findings are advisory and do not certify legal enforceability, work quality or originality.
 
-Current AI configuration and live verification: [Gemini status](docs/GEMINI_STATUS.md). The app now runs Gemini semantic extraction and whole-agreement review; demo payment mode is unchanged.
+## Further reading
+
+- [Upfront funding and payment verification](docs/UPFRONT_FUNDING.md)
+- [Ask Flow, attachments and website inspection](docs/PROJECT_ASSISTANT.md)
+- [Disputes, cancellation and settlement](docs/RESOLUTION_WORKFLOWS.md)
+- [Payment-aware amendments and lifecycle scenarios](docs/SCENARIO_SUPPORT_AUDIT.md)
+- [Email setup](docs/EMAIL_SETUP.md)
+- [Historical README](docs/README_HISTORY.md) ? retained for context; includes superseded payment flows.
