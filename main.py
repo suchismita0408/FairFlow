@@ -130,6 +130,7 @@ app = FastAPI(title='FairFlow', version='2.0.0', lifespan=lifespan)
 async def boundary(request: Request, call_next):
     identity_token=None
     try:
+        judge_demo.recover(request)
         if request.url.path.startswith('/api/') and request.method not in ('GET','HEAD','OPTIONS'):
             parts=request.url.path.strip("/").split("/")
             assistant_upload=len(parts)==5 and parts[0]=="api" and parts[1] in ("client","freelancer") and parts[2]=="projects" and parts[4]=="assistant"

@@ -2,6 +2,7 @@
 import copy
 import os
 import secrets
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -30,6 +31,7 @@ def configure():
         os.environ['AUTH_ENABLED'] = 'true'
         os.environ['EMAIL_MODE'] = 'local'
         os.environ['RUN_EMBEDDED_WORKER'] = 'false'
+        os.environ['JUDGE_DEMO_EPHEMERAL'] = 'true'
         db.metadata.create_all(db.engine())
 
 
@@ -69,6 +71,40 @@ def visit(conn, request):
     return row if row and row['expires_at'] > db.now() else None
 
 
+def demo_session(conn, row, token, role, response=None, request=None):
+    raw = auth.digest(token + ':session:' + role)
+    csrf = auth.digest(token + ':csrf:' + role)
+    if not db.one(conn, db.sessions, db.sessions.c.id == auth.digest(raw)):
+        conn.execute(insert(db.sessions).values(id=auth.digest(raw), user_id=row[role + '_id'],
+            csrf=csrf, expires_at=row['expires_at'], created_at=db.now(), last_active_at=db.now()))
+    if response is not None:
+        response.set_cookie(auth.COOKIE, raw, max_age=43200, httponly=True,
+                            secure=request.url.scheme == 'https', samesite='strict', path='/')
+    user = db.one(conn, db.users, db.users.c.id == row[role + '_id'])
+    return {'user': auth.view(user), 'csrf_token': csrf}
+
+
+def recover(request):
+    # The random cookie is a capability for ONLY its derived demo identities.
+    # Never reconstruct accounts, identities or project IDs supplied by the client.
+    if os.getenv('JUDGE_DEMO_EPHEMERAL') != 'true' or not enabled():
+        return
+    token = request.cookies.get(COOKIE, '')
+    role = request.cookies.get(COOKIE + '_role', '')
+    if not re.fullmatch(r'[A-Za-z0-9_-]{64}', token) or role not in ('client', 'freelancer'):
+        return
+    if request.cookies.get(auth.COOKIE) != auth.digest(token + ':session:' + role):
+        return
+    from .negotiation import transaction
+    with transaction() as conn:
+        row = visit(conn, request)
+        if not row:
+            # A fresh instance can restore a walkthrough; provider transactions
+            # are prohibited here because temporary storage cannot reconcile them.
+            row, _ = seed(conn, DemoInput(), token=token)
+        demo_session(conn, row, token, role)
+
+
 def mount(app):
     @app.get('/api/auth/judge-demo')
     def status(request: Request):
@@ -90,7 +126,10 @@ def mount(app):
         if origin and origin != str(request.base_url).rstrip('/'):
             raise HTTPException(403, 'Cross-origin demo requests are disabled.')
         with db.engine().begin() as conn:
+            if data.payment_mode == 'sandbox' and os.getenv('JUDGE_DEMO_EPHEMERAL') == 'true':
+                raise HTTPException(409, 'PayPal Sandbox needs a shared hosted database so payment records survive server changes. The quick walkthrough is available now.')
             row = visit(conn, request)
+            token = request.cookies.get(COOKIE)
             if row and data.action == 'start' and row['payload'].get('payment_mode') != data.payment_mode:
                 row = None
             if not row:
@@ -112,19 +151,24 @@ def mount(app):
                     conn.execute(update(db.users).where(db.users.c.id == row[role + '_id']).values(name=settings[role + '_name']))
                 save_recipient(conn, row['freelancer_id'], settings)
             user = db.one(conn, db.users, db.users.c.id == row[data.role + '_id'])
-            result = auth.create_session(conn, user, response, request)
+            if os.getenv('JUDGE_DEMO_EPHEMERAL') == 'true':
+                result = demo_session(conn, row, token, data.role, response, request)
+                response.set_cookie(COOKIE + '_role', data.role, max_age=43200, httponly=True,
+                                    secure=request.url.scheme == 'https', samesite='strict', path='/')
+            else:
+                result = auth.create_session(conn, user, response, request)
             result['redirect'] = f"/{data.role}/projects/{row['project_id']}"
             return result
 
 
-def seed(conn, data):
+def seed(conn, data, token=None):
     from .agreement_examples import example_agreement
     from . import negotiation
-    token = secrets.token_urlsafe(48)
+    token = token or secrets.token_urlsafe(48)
     settings = data.model_dump(mode='json', exclude={'role', 'action'})
     users = {}
     for role in ('client', 'freelancer'):
-        uid = db.uid()
+        uid = auth.digest(token + ':' + role)[:32]
         user = dict(id=uid, email=f'judge-{uid}@example.com', name=settings[role + '_name'],
                     password_hash=auth.DUMMY_HASH, verified=True, created_at=db.now(), role=role, handle='judge-' + uid)
         conn.execute(insert(db.users).values(**user))
@@ -142,7 +186,7 @@ def seed(conn, data):
         milestone.update(currency='USD', amount_minor=10000)
     terms['basics']['title'] = 'Judge demo: Coffee shop landing page'
     terms['parties'].update(client_name=data.client_name, freelancer_name=data.freelancer_name)
-    p = dict(id=db.uid(), engine=negotiation.ENGINE, status='IN_NEGOTIATION', turn='freelancer',
+    p = dict(id=auth.digest(token + ':project')[:32], engine=negotiation.ENGINE, status='IN_NEGOTIATION', turn='freelancer',
              draft_owner='freelancer', draft=terms, created_at=db.now(), updated_at=db.now(),
              voided_versions=[], disputes={}, first_response=True, reminders=[], judge_demo=True)
     p['judge_demo_payment_mode'] = data.payment_mode

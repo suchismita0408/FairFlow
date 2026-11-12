@@ -96,3 +96,24 @@ def test_sandbox_receiver_is_used_and_modes_are_separate(demo):
         require_sandbox()
     finally:
         auth.actor.reset(marker)
+
+
+def test_temporary_demo_recovers_on_another_server(demo, tmp_path, monkeypatch):
+    monkeypatch.setenv('JUDGE_DEMO_EPHEMERAL', 'true')
+    result = demo.post('/api/auth/judge-demo', json={})
+    assert result.status_code == 200, result.text
+    pid = result.json()['redirect'].split('/')[-1]
+    monkeypatch.setenv('DATABASE_URL', 'sqlite:///' + str(tmp_path / 'second-server.db'))
+    db.metadata.create_all(db.engine())
+    me = demo.get('/api/auth/me')
+    assert me.status_code == 200, me.text
+    assert me.json()['user']['id'] == result.json()['user']['id']
+    room = demo.get('/api/client/projects/' + pid)
+    assert room.status_code == 200, room.text
+    switched = demo.post('/api/auth/judge-demo', json={'action': 'switch', 'role': 'freelancer'})
+    assert switched.status_code == 200, switched.text
+    monkeypatch.setenv('DATABASE_URL', 'sqlite:///' + str(tmp_path / 'third-server.db'))
+    db.metadata.create_all(db.engine())
+    assert demo.get('/api/freelancer/projects/' + pid).status_code == 200
+    sandbox = demo.post('/api/auth/judge-demo', json={'payment_mode': 'sandbox'})
+    assert sandbox.status_code == 409

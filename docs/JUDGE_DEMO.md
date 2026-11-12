@@ -26,6 +26,11 @@ AUTH_ENABLED=false for the disposable demo. Data may disappear or differ across
 function instances. Use hosted PostgreSQL for durable shared data, and run
 `alembic upgrade head` before deploying against an existing database.
 
+Temporary Vercel walkthroughs recover their two demo identities, initial sample
+agreement and login when a request reaches a fresh instance. Edits can still reset
+between instances. Sandbox entry is blocked with a setup message in this temporary
+configuration: payment records require a shared hosted database.
+
 The toolbar requires AUTH_ENABLED=true, EMAIL_MODE=local, and a supported payment
 mode. Set ENABLE_JUDGE_DEMO=false to disable it. It is unavailable in SMTP mode.
 
