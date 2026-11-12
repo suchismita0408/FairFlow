@@ -16,6 +16,8 @@ os.environ.setdefault('AI_MODE','gemini' if os.getenv('GEMINI_API_KEY') else 'de
 if os.environ['AI_MODE'] not in ('demo','gemini'):
     raise RuntimeError('AI_MODE must be gemini or explicitly selected demo.')
 MODE = os.getenv('FAIRFLOW_MODE', 'demo')
+from app import judge_demo
+judge_demo.configure()
 if MODE not in ('demo','sandbox'):
     raise RuntimeError('Only demo and sandbox modes are supported. Live money is deliberately disabled.')
 if MODE == 'sandbox' and not db.secure() and len(os.getenv('FAIRFLOW_ADMIN_TOKEN','')) < 24:
@@ -377,6 +379,7 @@ app.mount('/static', StaticFiles(directory=ROOT/'static'), name='static')
 import sys
 agile.mount(app, sys.modules[__name__])
 auth.mount(app)
+judge_demo.mount(app)
 workspace.mount(app)
 from app import negotiation
 from app import assurance

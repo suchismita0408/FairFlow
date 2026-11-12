@@ -15,7 +15,10 @@ DELAY_SCOPE = 'https://uri.paypal.com/services/payments/delay-funds-disbursement
 
 def config():
     path = Path(os.getenv('PAYPAL_PLATFORM_CONFIG', str(Path(__file__).resolve().parents[1] / '.env.paypal-platform')))
-    return dotenv_values(path) if path.is_file() else {}
+    values = dict(dotenv_values(path)) if path.is_file() else {}
+    for key in ('PAYPAL_PLATFORM_CLIENT_ID', 'PAYPAL_PLATFORM_CLIENT_SECRET', 'PAYPAL_PLATFORM_BN_CODE'):
+        if os.getenv(key):values[key] = os.environ[key]
+    return values
 
 
 def configured():
@@ -28,6 +31,8 @@ def fingerprint():
 
 
 async def call(method, path, body=None, key=None, seller=None):
+    from .judge_demo import require_sandbox
+    require_sandbox()
     if not path.startswith(('/v1/customer/partners/', '/v2/customer/partner-referrals', '/v2/checkout/orders', '/v2/payments/captures/', '/v2/payments/refunds/', '/v1/payments/referenced-payouts-items')):
         raise HTTPException(409, 'Unsupported platform operation.')
     c = config()

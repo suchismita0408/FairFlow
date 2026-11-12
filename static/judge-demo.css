@@ -1,0 +1,12 @@
+.judge-demo-bar { position: relative; z-index: 10; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 18px 24px; background: #edf3ff; color: #142b55; border-bottom: 1px solid #b8cdf6; }
+.judge-demo-bar div { flex: 1 1 280px; }
+.judge-demo-bar p { margin: 5px 0 0; font-size: 14px; }
+.judge-demo-bar button, .judge-demo-dialog button { border: 1px solid #2256d8; border-radius: 8px; padding: 10px 16px; background: #2256d8; color: white; cursor: pointer; }
+.judge-demo-bar button:disabled, .judge-demo-dialog button:disabled { opacity: .6; cursor: wait; }
+.judge-demo-dialog { max-width: 520px; width: calc(100% - 40px); padding: 24px; border: 1px solid #b8cdf6; border-radius: 14px; background: white; color: #142b55; }
+.judge-demo-dialog::backdrop { background: #10204088; }
+.judge-demo-dialog label { display: block; margin: 14px 0; }
+.judge-demo-dialog input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border: 1px solid #a4b7d8; border-radius: 6px; }
+.judge-demo-error { color: #b00020; }
+body:has(#sidebar) > .judge-demo-bar { margin-left: 248px; }
+@media (max-width: 900px) { body:has(#sidebar) > .judge-demo-bar { margin-left: 0; } }

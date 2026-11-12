@@ -28,6 +28,8 @@ def check_payout_sender(row):
     if saved and saved!=payout_sender():raise HTTPException(409,'This payout belongs to a different sender app. Restore its original payout credentials before reconciliation.')
 
 async def call(method, path, body=None, key=None):
+    from .judge_demo import require_sandbox
+    require_sandbox()
     try:
         return await _call(method, path, body, key)
     except (httpx.HTTPError,ValueError,KeyError,TypeError):

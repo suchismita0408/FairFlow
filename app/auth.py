@@ -68,7 +68,7 @@ def token_message(conn,user,kind):
 def create_session(conn,user,response,request=None):
     raw=secrets.token_urlsafe(48);csrf=secrets.token_urlsafe(32)
     conn.execute(insert(db.sessions).values(id=digest(raw),user_id=user['id'],csrf=csrf,expires_at=until(720),created_at=db.now(),last_active_at=db.now(),ip=request.client.host if request and request.client else '',user_agent=request.headers.get('user-agent','')[:500] if request else ''))
-    response.set_cookie(COOKIE,raw,max_age=43200,httponly=True,secure=session_secure(),samesite='strict',path='/')
+    response.set_cookie(COOKIE,raw,max_age=43200,httponly=True,secure=session_secure() or bool(request and request.url.scheme=='https'),samesite='strict',path='/')
     return {'user':view(user),'csrf_token':csrf}
 
 def throttle(request,email):
@@ -99,6 +99,7 @@ def login_lock(email, failed=False, clear=False):
 
 PUBLIC_PATHS = {'/api/health', '/api/currencies', '/api/auth/register', '/api/auth/login', '/api/auth/demo-login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/webhooks/paypal'}
 PUBLIC_PATHS.update('/api/'+role+'/'+action for role in ('client','freelancer') for action in ('signup','login'))
+PUBLIC_PATHS.add('/api/auth/judge-demo')
 
 async def authenticate(request):
     if not db.secure():return None
