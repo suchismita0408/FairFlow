@@ -41,6 +41,7 @@
   };
   if (!state.active) {
     button('Try quick demo', () => enter('client'));
+    if (state.sandbox_ready) button('Try PayPal Sandbox', () => enter('client', 'start', {payment_mode: 'sandbox'}));
   }
   else {
     for (const role of ['client', 'freelancer']) button('Open ' + role + ' view', () => {
@@ -66,6 +67,12 @@
     catch (error) { dialog.querySelector('[role=alert]').textContent = error.message; submit.disabled = false; }
   };
   button(state.active ? 'Edit demo accounts' : 'Customize demo accounts', () => dialog.showModal());
+  if (state.active && state.sandbox_ready && state.settings.payment_mode !== 'sandbox') {
+    button('Open PayPal Sandbox demo', () => enter('client', 'start', {payment_mode: 'sandbox'}));
+  }
+  if (state.active && state.settings.payment_mode === 'sandbox') {
+    button('Open quick walkthrough', () => enter('client', 'start', {payment_mode: 'simulated'}));
+  }
   bar.append(feedback);
   document.body.prepend(bar);
   document.body.append(dialog);

@@ -114,7 +114,8 @@ def mount(app):
             row = visit(conn, request)
             from . import platform_paypal
             configured = platform_paypal.configured() or bool(os.getenv('PAYPAL_CLIENT_ID') and os.getenv('PAYPAL_CLIENT_SECRET'))
-            return {'enabled': True, 'active': bool(row), 'sandbox_configured': configured,
+            ready = configured and os.getenv('JUDGE_DEMO_EPHEMERAL') != 'true' and db.engine().dialect.name == 'postgresql'
+            return {'enabled': True, 'active': bool(row), 'sandbox_configured': configured, 'sandbox_ready': ready,
                     'settings': row['payload'] if row else {},
                     'project_id': row['project_id'] if row else None}
 
